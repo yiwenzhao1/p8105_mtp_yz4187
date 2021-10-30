@@ -27,20 +27,116 @@ df %>%
          eop_detected = ifelse(eop_size_mm == 0, "0","1")) %>%
   select(sex, age_group, eop_size, fhp_category, eop_detected) %>%
   group_by(sex) %>%
-  summarise(n = n()) %>%
+  summarise(n = n(),
+            ) %>%
   arrange(desc(n)) %>%
   knitr::kable()
 
 df %>%
   mutate(sex = ifelse(sex == 0,"female", "male"),
-         eop_detected = ifelse(eop_size_mm == 0, "0","1")) %>%
+         eop_detected = ifelse(eop_size_mm == 0, "0","1"),
+         age_group = fct_collapse(age_group, "6" = c("6","7","8"))
+         ) %>%
   select(sex, age_group, eop_size, fhp_category, eop_detected) %>%
   group_by(age_group) %>%
   summarise(n = n()) %>%
   arrange(desc(n)) %>%
   knitr::kable()
 ```
-**Description: ** The data cleaning process starts with replacing all the na with either a zero (since the missing eop_size(mm) in the dataset is 0) or the mean value (since the mean value will not affect the results of following calculations). The key variables are sex, age_group, eop_size, fhp_category. One categorical variable "eop_detected" has been added to the data table to define whether the eop is detected. There are 1221 participants in total, and there are 614 females and 607 males. The the most participantsare in the 18-30 age group, and 914 participants are under 60.
+**Description:** The data cleaning process starts with replacing all the na with either a zero (since the missing eop_size(mm) in the dataset is 0) or the mean value (since the mean value will not affect the results of following calculations). The key variables are sex, age_group, eop_size, fhp_category. One categorical variable "eop_detected" has been added to the data table to define whether the eop is detected. There are 1221 participants in total, and there are 614 females and 607 males. The the most participants are in the 18-30 age group, and 914 participants are under 60.
+
+
+### Problem 2 - Visualization ###
+```{r}
+df %>%
+  filter(age_group > 1) %>%
+  mutate(sex = ifelse(sex == 0,"female", "male"),
+         age_group = fct_collapse(age_group, "6" = c("6","7","8"))) %>%
+  ggplot(aes(x = age_group, y = fhp_size_mm, fill = sex)) + geom_boxplot(colour = "black") +
+  scale_x_discrete(
+    labels = c("18-30 years","30s","40s","50s",">60s")) +
+  labs(
+    title = "FHP values across the age groups and sexes",
+    x = "Age Groups (years)",
+    y = "Forward Head Protraction Size in mm (FHP)"
+    )
+```
+
+```{r}
+eeop_df_m = df %>%
+  filter(eop_size_mm > 10, sex == 0, age_group > 1) %>%
+  mutate(sex = ifelse(sex == 0,"female", "male"),
+         age_group = fct_collapse(age_group, "6" = c("6","7","8"))
+         ) %>%
+  select(sex, age_group, eop_size_mm) %>%
+  group_by(age_group) %>%
+  summarise(n = n()) %>%
+  arrange(age_group)
+
+eeop_df_f = df %>%
+  filter(eop_size_mm > 10, sex == 1, age_group > 1) %>%
+  mutate(sex = ifelse(sex == 0,"female", "male"),
+         age_group = fct_collapse(age_group, "6" = c("6","7","8"))
+         ) %>%
+  select(sex, age_group, eop_size_mm) %>%
+  group_by(age_group) %>%
+  summarise(n = n()) %>%
+  arrange(age_group)
+
+eeop_df = full_join(eeop_df_m,eeop_df_f, by = "age_group")
+names(eeop_df) = c("age_group", "male", "female")
+
+eop_df_m = df %>%
+  filter(age_group > 1, sex == 0) %>%
+  mutate(sex = ifelse(sex == 0,"female", "male"),
+         age_group = fct_collapse(age_group, "6" = c("6","7","8"))
+         ) %>%
+  select(sex, age_group, eop_size_mm) %>%
+  group_by(age_group) %>%
+  summarise(n = n()) %>%
+  arrange(age_group) 
+
+eop_df_f = df %>%
+  filter(age_group > 1, sex == 1) %>%
+  mutate(sex = ifelse(sex == 0,"female", "male"),
+         age_group = fct_collapse(age_group, "6" = c("6","7","8"))
+         ) %>%
+  select(sex, age_group, eop_size_mm) %>%
+  group_by(age_group) %>%
+  summarise(n = n()) %>%
+  arrange(age_group) 
+
+eop_df = full_join(eop_df_m,eop_df_f, by = "age_group")
+names(eop_df) = c("age_group", "male", "female")
+
+join_df = full_join(eeop_df,eop_df, by = "age_group")
+rate_df = mutate(join_df, eeop_rate_male = male.x / male.y, eeop_rate_female = female.x/female.y)
+
+mdf =
+  rate_df %>%
+  select(age_group,eeop_rate_male) %>%
+  mutate(sex = "male") %>%
+  rename("eeop_rate" = "eeop_rate_male")
+fdf =
+  rate_df %>%
+  select(age_group,eeop_rate_female) %>%
+  mutate(sex = "female") %>%
+  rename("eeop_rate" = "eeop_rate_female")
+
+rate_df = 
+  rbind(mdf,fdf)
+rate_df
+
+rate_df %>%
+  ggplot(aes(x = age_group, y = eeop_rate, group = sex, color = sex)) + geom_line() + geom_point() +
+  scale_x_discrete(
+    labels = c("18-30 years","30s","40s","50s",">60s")) +
+  labs(
+    title = "EEOP Rate across age groups within the tested male and female cases",
+    x = "Age Groups (years)",
+    y = "EEOP Rate"
+    )
+```
 
 
 

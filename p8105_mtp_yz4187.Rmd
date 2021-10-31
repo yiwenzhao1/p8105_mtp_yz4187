@@ -12,7 +12,7 @@ library(dplyr)
 library(patchwork)
 ```
 ### Introduction ###
-This project will use the correction data used in the report describing the relationship between posture and "enlarged protuberances" among young people which published in 2018 Nature Scientific Reports and try to find out a new analysis on the relationship through the new correction data.
+This project uses the correction data describing the relationship between posture and "enlarged protuberances" among people and makes new data analysis on relationships among different variables.
 
 ### Problem 1 - Data ###
 ```{r}
@@ -44,8 +44,7 @@ df %>%
   arrange(desc(n)) %>%
   knitr::kable()
 ```
-**Description:** The data cleaning process starts with replacing all the na with either a zero (since the missing eop_size(mm) in the dataset is 0) or the mean value (since the mean value will not affect the results of following calculations). The key variables are sex, age_group, eop_size, fhp_category. One categorical variable "eop_detected" has been added to the data table to define whether the eop is detected. There are 1221 participants in total, and there are 614 females and 607 males. The the most participants are in the 18-30 age group, and 914 participants are under 60.
-
+**Description:** The data cleaning process starts with replacing NAs with either a zero (since the missing eop_size(mm) in the dataset is 0) or the mean value (since the mean value will not affect the results of following calculations). Key variables are sex, age_group, eop_size, fhp_size. One categorical variable "eop_detected" has been added to the data table to define participants who have eop. There are 1221 participants in total(614 females, 607 males). The most participants are in 18-30 age group, and 914 participants are under 60.
 
 ### Problem 2 - Visualization ###
 ```{r, warning=FALSE}
@@ -56,11 +55,11 @@ fhp_plot =
          age_group = fct_collapse(age_group, "6" = c("6","7","8"))) %>%
   ggplot(aes(x = age_group, y = fhp_size_mm, fill = sex)) + geom_boxplot(colour = "black") +
   scale_x_discrete(
-    labels = c("18-30 years","30s","40s","50s",">60s")) +
+    labels = c("18-30","30s","40s","50s",">60s")) +
   labs(
-    title = "FHP values across the age groups and sexes",
+    title = "FHP values across the age groups and genders",
     x = "Age Groups (years)",
-    y = "Forward Head Protraction Size in mm (FHP)"
+    y = "FHP Size in mm"
     )
 ```
 
@@ -134,15 +133,15 @@ eeop_plot =
   rate_df %>%
   ggplot(aes(x = age_group, y = eeop_rate, group = sex, color = sex)) + geom_line() + geom_point() +
   scale_x_discrete(
-    labels = c("18-30 years","30s","40s","50s",">60s")) +
+    labels = c("18-30","30s","40s","50s",">60s")) +
   labs(
-    title = "EEOP Rate across age groups within the tested male and female cases",
+    title = "EEOP Rate across age groups and genders",
     x = "Age Groups (years)",
     y = "EEOP Rate"
     )
 ```
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, message=FALSE}
 fhp_eop_plot = 
   df %>%
   filter(age_group > 1) %>%
@@ -156,7 +155,7 @@ fhp_eop_plot =
 (fhp_plot + eeop_plot) / fhp_eop_plot
 ```
 
-### Problem 3 - Reproducing Reported Skills ###
+### Problem 3 - Reproducing reported result ###
 ```{r warning=FALSE}
 df %>%
   mutate(sex = ifelse(sex == 0,"female", "male"),
@@ -212,7 +211,10 @@ df %>%
 FHP_prevalence = (99)/(301)
 print(FHP_prevalence)
 ```
-**Answer:** The authors' stated sample sizes in each group are not consistent with the data we have but no big difference. The sample size we have is: 18–30 n=303, 31–40 n=204, 41–50 n=207, 51–60 n=200 and >60 n=305. The mean of FHP is approximately consistent with the authors' data. EEOP is the enlarged EOP which have exceeded 10 mm in size. Variables can used to evaluate this claim are EEOP_size_mm and number of participants. The prevalence of EEOP is 55.98%, which is not consistent with the authors' data.The FHP is more common in older subjects. From our data, the FHP>40mm is observed 32.89% in over 60s cases, which is a little lower than the authors' data.
+**Answer:** The authors' stated sample sizes are not consistent with the our sample sizes, but the difference is not obvious.The sample size we have is: 18–30 n=303, 31–40 n=204, 41–50 n=207, 51–60 n=200 and >60 n=305. The mean of FHP is approximately consistent with the authors' data. EEOP is the enlarged EOP which have exceeded 10 mm in size. we can use EEOP_size_mm, age_group and number of participants to evaluate this claim. The prevalence of EEOP is 55.98% and is not consistent with the authors' data.The FHP is more common in older subjects. From our data, the FHP>40mm is observed 32.89% in >60s cases, which is less than the authors' result.
+
+### Problem 4 - Discussion###
+    Comparing to our new data analysis, the original report is less accurate since its results are not completely consistent with our results even though the difference is not big. The authors' report is not clear enough to provide evidence that cell phones are causing horn growth since their graphs have not shown clear relationship between cell phone use and EOP/FNP. We got a higher prevalence of EEOP(58.98%) and a little lower prevalence of FHP>40mm than authors' data. According to our graphs and analysis, we can clearly see the relationships how FHP size, age, sex and EOP size are related to each other. Males and older age groups have more possibilities to get larger FHP than younger people and women, but the relationship between EOP size and FHP size is not very clear. With using EEOP rate, we find more accurate conclusion that both young age groups and age over 60s have a higher rate of EEOP. People who are over 60s are also more likely to have FHP than younger people. Thus, there is no clear evidence shows that younger people may have higher possibilities to get enlarged protuberances. To address the relationship between phone using and "horn" growth, we still need data on frequencies or total time each day people using phones in different age groups and genders.
 
 
 ```{r, message=FALSE}

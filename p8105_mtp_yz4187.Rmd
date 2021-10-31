@@ -9,6 +9,7 @@ output: github_document
 library(tidyverse)
 library(readxl)
 library(dplyr)
+library(patchwork)
 ```
 ### Introduction ###
 This project will use the correction data used in the report describing the relationship between posture and "enlarged protuberances" among young people which published in 2018 Nature Scientific Reports and try to find out a new analysis on the relationship through the new correction data.
@@ -47,8 +48,9 @@ df %>%
 
 
 ### Problem 2 - Visualization ###
-```{r}
-df %>%
+```{r, warning=FALSE}
+fhp_plot = 
+  df %>%
   filter(age_group > 1) %>%
   mutate(sex = ifelse(sex == 0,"female", "male"),
          age_group = fct_collapse(age_group, "6" = c("6","7","8"))) %>%
@@ -62,7 +64,8 @@ df %>%
     )
 ```
 
-```{r}
+
+```{r, warning=FALSE}
 eeop_df_m = df %>%
   filter(eop_size_mm > 10, sex == 0, age_group > 1) %>%
   mutate(sex = ifelse(sex == 0,"female", "male"),
@@ -110,15 +113,15 @@ eop_df = full_join(eop_df_m,eop_df_f, by = "age_group")
 names(eop_df) = c("age_group", "male", "female")
 
 join_df = full_join(eeop_df,eop_df, by = "age_group")
-rate_df = mutate(join_df, eeop_rate_male = male.x / male.y, eeop_rate_female = female.x/female.y)
+combine_df = mutate(join_df, eeop_rate_male = male.x / male.y, eeop_rate_female = female.x/female.y)
 
 mdf =
-  rate_df %>%
+  combine_df %>%
   select(age_group,eeop_rate_male) %>%
   mutate(sex = "male") %>%
   rename("eeop_rate" = "eeop_rate_male")
 fdf =
-  rate_df %>%
+  combine_df %>%
   select(age_group,eeop_rate_female) %>%
   mutate(sex = "female") %>%
   rename("eeop_rate" = "eeop_rate_female")
@@ -127,7 +130,8 @@ rate_df =
   rbind(mdf,fdf)
 rate_df
 
-rate_df %>%
+eeop_plot = 
+  rate_df %>%
   ggplot(aes(x = age_group, y = eeop_rate, group = sex, color = sex)) + geom_line() + geom_point() +
   scale_x_discrete(
     labels = c("18-30 years","30s","40s","50s",">60s")) +
@@ -138,7 +142,77 @@ rate_df %>%
     )
 ```
 
+```{r, warning=FALSE}
+fhp_eop_plot = 
+  df %>%
+  filter(age_group > 1) %>%
+  mutate(sex = ifelse(sex == 0,"female", "male"),
+         age_group = fct_collapse(age_group, "6" = c("6","7","8"))
+         ) %>%
+  ggplot(aes(x = fhp_size_mm, y = eop_size_mm, color = sex)) +
+  geom_smooth(se = TRUE) + 
+  facet_grid(sex ~ age_group)
 
+(fhp_plot + eeop_plot) / fhp_eop_plot
+```
+
+### Problem 3 - Reproducing Reported Skills ###
+```{r warning=FALSE}
+df %>%
+  mutate(sex = ifelse(sex == 0,"female", "male"),
+         age_group = fct_collapse(age_group, "6" = c("6","7","8"))) %>%
+  select(sex, age_group, eop_size) %>%
+  group_by(age_group) %>%
+  summarise(n = n()) %>%
+  arrange(desc(n)) %>%
+  knitr::kable()
+
+fhp_mean = mean(df$fhp_size_mm,na.rm = TRUE)
+fhp_sd = sd(df$fhp_size_mm)
+print(fhp_mean)
+print(fhp_sd)
+
+df %>%
+  filter(eop_size_mm >= 10) %>%
+  mutate(sex = ifelse(sex == 0,"female", "male"),
+         age_group = fct_collapse(age_group, "6" = c("6","7","8"))) %>%
+  select(sex, age_group, eop_size) %>%
+  group_by(age_group) %>%
+  summarise(n = n()) %>%
+  arrange(age_group) %>%
+  knitr::kable() 
+
+df %>%
+  filter(eop_size_mm > 0) %>%
+  mutate(sex = ifelse(sex == 0,"female", "male"),
+         age_group = fct_collapse(age_group, "6" = c("6","7","8"))) %>%
+  select(sex, age_group, eop_size) %>%
+  group_by(age_group) %>%
+  summarise(n = n()) %>%
+  arrange(age_group) %>%
+  knitr::kable() 
+
+eeop_prevalence = (149 + 53 + 44 + 51 + 96)/(1 + 221 + 115 + 96 + 104 + 165)
+print(eeop_prevalence)
+
+df %>%
+  filter(fhp_size_mm > 40, age_group >= 6) %>%
+  mutate(sex = ifelse(sex == 0,"female", "male"),
+         age_group = fct_collapse(age_group, "6" = c("6","7","8"))) %>%
+  group_by(age_group) %>%
+  summarise(n = n()) 
+
+df %>%
+  filter(fhp_size_mm > 0, age_group >= 6) %>%
+  mutate(sex = ifelse(sex == 0,"female", "male"),
+         age_group = fct_collapse(age_group, "6" = c("6","7","8"))) %>%
+  group_by(age_group) %>%
+  summarise(n = n())
+
+FHP_prevalence = (99)/(301)
+print(FHP_prevalence)
+```
+**Answer:** The authors' stated sample sizes in each group are not consistent with the data we have but no big difference. The sample size we have is: 18–30 n=303, 31–40 n=204, 41–50 n=207, 51–60 n=200 and >60 n=305. The mean of FHP is approximately consistent with the authors' data. EEOP is the enlarged EOP which have exceeded 10 mm in size. Variables can used to evaluate this claim are EEOP_size_mm and number of participants. The prevalence of EEOP is 55.98%, which is not consistent with the authors' data.The FHP is more common in older subjects. From our data, the FHP>40mm is observed 32.89% in over 60s cases, which is a little lower than the authors' data.
 
 
 ```{r, message=FALSE}
